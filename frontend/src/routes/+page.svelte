@@ -8,7 +8,9 @@
 </script>
 
 <Layout>
-    <h1 class="title">tempeh!</h1>
+    <h1 class="title">
+        <a target="_blank" href="https://github.com/bkwhite/tempeh">tempeh!</a>
+    </h1>
     {#if isLoggedIn}
         <Feed />
     {:else}

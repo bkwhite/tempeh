@@ -36,6 +36,7 @@
             flex-direction: column;
             align-items: center;
             height: 100vh;
+            padding-bottom: 32px;
         }
     }
 </style>

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { SERVER_URL } from "$lib";
     import { login } from "../state.svelte";
 
     type UserResponse = {
@@ -10,7 +11,7 @@
     let password = $state("");
 
     const onLogin = () => {
-        fetch("http://127.0.0.1:3000/login", {
+        fetch(`${SERVER_URL}/login`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

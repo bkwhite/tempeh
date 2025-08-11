@@ -1,6 +1,6 @@
 mod utils;
 
-use crate::utils::{sse::sse_handler, token::generate_token};
+use crate::utils::{sse::sse_handler, stub::random_post, token::generate_token};
 use axum::{
     Router,
     extract::{Json, State},
@@ -48,7 +48,7 @@ struct PostsResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct Post {
+pub struct Post {
     id: String,
     username: String,
     content: String,
@@ -70,7 +70,13 @@ async fn main() {
     let users: HashMap<String, User> = HashMap::new();
     let shared_users = Arc::new(RwLock::new(users));
 
-    let posts: HashMap<String, Post> = HashMap::new();
+    let mut posts: HashMap<String, Post> = HashMap::new();
+
+    // add some sample posts to the posts map
+
+    let post_id = generate_token(64);
+    posts.insert(post_id.clone(), random_post(post_id.clone()));
+
     let shared_posts = Arc::new(RwLock::new(posts));
 
     let (tx, _rx) = broadcast::channel(100);
@@ -91,7 +97,6 @@ async fn main() {
 
     // Build our application with routes
     let app = Router::new()
-        .route("/", get(hello_world))
         .route("/login", post(login))
         .route("/create_post", post(create_post))
         .route("/get_posts", get(get_posts))
@@ -100,26 +105,12 @@ async fn main() {
         .layer(cors);
 
     // Run the server
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
-        .await
-        .unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
 
     println!("Server running on http://127.0.0.1:3000");
     println!("POST to http://127.0.0.1:3000/users");
 
     axum::serve(listener, app).await.unwrap();
-}
-
-async fn hello_world(State(state): State<AppState>) -> &'static str {
-    {
-        let users = state.users.read().await;
-
-        for (k, _v) in users.iter() {
-            println!("#{}", k);
-        }
-    }
-
-    "Hello, World!"
 }
 
 // POST endpoint handler
@@ -198,7 +189,6 @@ async fn create_post(
 
     {
         let mut posts = state.posts.write().await;
-        println!("Adding new post");
         posts.insert(post.id.clone(), post.clone());
         let serialized_post = serde_json::to_string(&post).unwrap_or_default();
         let _ = state.tx.send(serialized_post);
@@ -212,9 +202,15 @@ async fn get_posts(
 ) -> Result<(StatusCode, ResponseJson<PostsResponse>), StatusCode> {
     let posts = state.posts.read().await;
 
-    let posts_response = PostsResponse {
-        posts: posts.values().cloned().collect(),
-    };
+    let mut posts_vec: Vec<Post> = posts.values().cloned().collect();
+
+    // Sort by creation date (latest first)
+    posts_vec.sort_by(|a, b| b.created.cmp(&a.created));
+
+    // Limit to 50 posts
+    posts_vec.truncate(50);
+
+    let posts_response = PostsResponse { posts: posts_vec };
 
     Ok((StatusCode::OK, ResponseJson(posts_response)))
 }

@@ -1,4 +1,5 @@
 <script>
+    import { SERVER_URL } from "$lib";
     import { getAppState } from "../state.svelte";
 
     let content = $state("");
@@ -11,7 +12,7 @@
 
         const { username, token } = getAppState();
 
-        fetch("http://127.0.0.1:3000/create_post", {
+        fetch(`${SERVER_URL}/create_post`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -25,6 +26,7 @@
             .then((response) => response.json())
             .then((data) => {
                 console.log(data);
+                content = "";
             });
     };
 </script>
